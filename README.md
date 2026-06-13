@@ -1,12 +1,24 @@
-# Project Management CLI Tool
+# 📋 Project Management CLI Tool
 
-A command-line tool to manage users, projects, and tasks with JSON persistence.
+A command-line application to manage users, projects, and tasks with persistent JSON storage. Built for the Python Summative Lab assignment.
 
-## Setup
+## Features
 
-1. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate   # Windows: venv\Scripts\activate
+- **User management** – add and store users  
+- **Project tracking** – assign projects to users with descriptions and due dates  
+- **Task management** – add tasks to projects, assign owners, mark as complete  
+- **Persistent storage** – all data saved to `data/project_data.json` automatically  
+- **Beautiful CLI tables** – uses `rich` library for readable output  
+- **Error handling** – friendly messages for missing users, projects, or tasks  
+- **Unit tests** – included and passing  
+
+## Quick Start
+
+### Prerequisites
+- Python 3.10 or higher  
+- `pip` package manager  
+
+### Installation
+
+```bash
 pip install -r requirements.txt
-## Version 1.0
