@@ -1,29 +1,22 @@
 import unittest
 from models.user import User
-from models.project import Project
 
 class TestUser(unittest.TestCase):
-    def setUp(self):
-        User.clear_all()
-
     def test_create_user(self):
-        u = User("Alice", "a@b.com")
+        u = User("Alice", "alice@example.com")
         self.assertEqual(u.name, "Alice")
-        self.assertEqual(u.email, "a@b.com")
+        self.assertEqual(u.email, "alice@example.com")
 
-    def test_add_project(self):
-        u = User("Bob", "b@c.com")
-        p = Project("Test Proj")
-        u.add_project(p)
-        self.assertIn(p, u.projects)
-        self.assertEqual(p.user, u)
+    def test_invalid_email(self):
+        with self.assertRaises(ValueError):
+            User("Bob", "bademail")
+        with self.assertRaises(ValueError):
+            User("Bob", "bob@domain")
 
-    def test_find_by_name(self):
-        u1 = User("Charlie", "c@d.com")
-        User("Dave", "d@e.com")
-        found = User.find_by_name("Charlie")
-        self.assertEqual(found, u1)
-        self.assertIsNone(User.find_by_name("Eve"))
+    def test_repr(self):
+        u = User("Charlie", "charlie@test.com")
+        self.assertIn("Charlie", repr(u))
+        self.assertIn("charlie@test.com", repr(u))
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,136 +1,139 @@
 #!/usr/bin/env python3
 import argparse
-from rich.console import Console
-from rich.table import Table
-
+import sys
 from models.user import User
 from models.project import Project
 from models.task import Task
-from utils.file_handler import save_data, load_data
+from utils.file_handler import load_data, save_data
+from utils.helpers import print_projects, print_tasks
 
-console = Console()
+users = []
+projects = []
+tasks = []
 
-def load_and_sync():
-    return load_data()
+def rebuild_from_json():
+    global users, projects, tasks
+    data = load_data()
+    users.clear()
+    for u_data in data.get("users", []):
+        u = User(u_data["name"], u_data["email"])
+        users.append(u)
+    projects.clear()
+    for p_data in data.get("projects", []):
+        p = Project(p_data["title"], p_data["description"], p_data["due_date"])
+        projects.append(p)
+    tasks.clear()
+    for t_data in data.get("tasks", []):
+        t = Task(t_data["title"], t_data["assigned_to"])
+        t.status = t_data["status"]
+        tasks.append(t)
 
-def save_and_sync(users, projects, tasks):
+def save_all():
     save_data(users, projects, tasks)
 
-def cmd_add_user(args):
-    users, projects, tasks = load_and_sync()
-    if User.find_by_name(args.name):
-        console.print(f"[red]User '{args.name}' already exists.[/red]")
-        return
-    user = User(args.name, args.email)
-    save_and_sync(users + [user], projects, tasks)
-    console.print(f"[green]User '{args.name}' added successfully.[/green]")
-
-def cmd_list_users(args):
-    users, _, _ = load_and_sync()
-    if not users:
-        console.print("[yellow]No users found.[/yellow]")
-        return
-    table = Table(title="Users")
-    table.add_column("Name", style="cyan")
-    table.add_column("Email", style="green")
+def find_user(name):
     for u in users:
-        table.add_row(u.name, u.email)
-    console.print(table)
+        if u.name == name:
+            return u
+    return None
 
-def cmd_add_project(args):
-    users, projects, tasks = load_and_sync()
-    user = User.find_by_name(args.user)
-    if not user:
-        console.print(f"[red]User '{args.user}' not found.[/red]")
-        return
-    if any(p.title == args.title and p.user == user for p in projects):
-        console.print(f"[red]Project '{args.title}' already exists for user '{args.user}'.[/red]")
-        return
-    proj = Project(args.title, args.description or "", args.due_date)
-    user.add_project(proj)
-    projects.append(proj)
-    save_and_sync(users, projects, tasks)
-    console.print(f"[green]Project '{args.title}' added to user '{args.user}'.[/green]")
-
-def cmd_list_projects(args):
-    _, projects, _ = load_and_sync()
-    if not projects:
-        console.print("[yellow]No projects found.[/yellow]")
-        return
-    table = Table(title="Projects")
-    table.add_column("Title", style="magenta")
-    table.add_column("User", style="cyan")
-    table.add_column("Description", style="white")
-    table.add_column("Due Date", style="green")
+def find_project(title):
     for p in projects:
-        table.add_row(p.title, p.user.name if p.user else "None", p.description or "", p.due_date or "")
-    console.print(table)
-
-def cmd_add_task(args):
-    users, projects, tasks = load_and_sync()
-    proj = next((p for p in projects if p.title == args.project), None)
-    if not proj:
-        console.print(f"[red]Project '{args.project}' not found.[/red]")
-        return
-    if any(t.title == args.title for t in proj.tasks):
-        console.print(f"[red]Task '{args.title}' already exists in project '{args.project}'.[/red]")
-        return
-    task = Task(args.title, status="pending", assigned_to=args.assigned_to)
-    proj.add_task(task)
-    tasks.append(task)
-    save_and_sync(users, projects, tasks)
-    console.print(f"[green]Task '{args.title}' added to project '{args.project}'.[/green]")
-
-def cmd_complete_task(args):
-    users, projects, tasks = load_and_sync()
-    task_found = next((t for t in tasks if t.title == args.title), None)
-    if not task_found:
-        console.print(f"[red]Task '{args.title}' not found.[/red]")
-        return
-    task_found.mark_complete()
-    save_and_sync(users, projects, tasks)
-    console.print(f"[green]Task '{args.title}' marked as complete.[/green]")
+        if p.title == title:
+            return p
+    return None
 
 def main():
-    parser = argparse.ArgumentParser(description="Project Management CLI Tool")
+    parser = argparse.ArgumentParser(description="Project Management CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     p_add_user = subparsers.add_parser("add-user", help="Add a new user")
     p_add_user.add_argument("--name", required=True)
     p_add_user.add_argument("--email", required=True)
 
-    p_list_users = subparsers.add_parser("list-users", help="List all users")
-
     p_add_proj = subparsers.add_parser("add-project", help="Add a project to a user")
     p_add_proj.add_argument("--user", required=True)
     p_add_proj.add_argument("--title", required=True)
-    p_add_proj.add_argument("--description", default="")
-    p_add_proj.add_argument("--due-date", default="")
-
-    p_list_proj = subparsers.add_parser("list-projects", help="List all projects")
+    p_add_proj.add_argument("--desc", default="")
+    p_add_proj.add_argument("--due", required=True)
 
     p_add_task = subparsers.add_parser("add-task", help="Add a task to a project")
     p_add_task.add_argument("--project", required=True)
     p_add_task.add_argument("--title", required=True)
-    p_add_task.add_argument("--assigned-to", help="Name of user assigned")
+    p_add_task.add_argument("--assignee", required=True)
 
-    p_complete = subparsers.add_parser("complete-task", help="Mark a task as complete")
+    p_list_proj = subparsers.add_parser("list-projects", help="List all projects for a user")
+    p_list_proj.add_argument("--user", required=True)
+
+    p_list_tasks = subparsers.add_parser("list-tasks", help="List tasks for a project")
+    p_list_tasks.add_argument("--project", required=True)
+
+    p_complete = subparsers.add_parser("complete-task", help="Mark a task complete")
+    p_complete.add_argument("--project", required=True)
     p_complete.add_argument("--title", required=True)
 
     args = parser.parse_args()
+    rebuild_from_json()
 
     if args.command == "add-user":
-        cmd_add_user(args)
-    elif args.command == "list-users":
-        cmd_list_users(args)
+        try:
+            u = User(args.name, args.email)
+            users.append(u)
+            save_all()
+            print(f"User '{args.name}' added.")
+        except ValueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+
     elif args.command == "add-project":
-        cmd_add_project(args)
-    elif args.command == "list-projects":
-        cmd_list_projects(args)
+        user = find_user(args.user)
+        if not user:
+            print(f"Error: User '{args.user}' not found.")
+            sys.exit(1)
+        p = Project(args.title, args.desc, args.due)
+        projects.append(p)
+        user.projects.append(p)
+        save_all()
+        print(f"Project '{args.title}' added to user '{args.user}'.")
+
     elif args.command == "add-task":
-        cmd_add_task(args)
+        project = find_project(args.project)
+        if not project:
+            print(f"Error: Project '{args.project}' not found.")
+            sys.exit(1)
+        task = Task(args.title, args.assignee)
+        tasks.append(task)
+        project.add_task(task)
+        save_all()
+        print(f"Task '{args.title}' added to project '{args.project}'.")
+
+    elif args.command == "list-projects":
+        user = find_user(args.user)
+        if not user:
+            print(f"Error: User '{args.user}' not found.")
+            sys.exit(1)
+        print_projects(user.projects)
+
+    elif args.command == "list-tasks":
+        project = find_project(args.project)
+        if not project:
+            print(f"Error: Project '{args.project}' not found.")
+            sys.exit(1)
+        print_tasks(project.tasks)
+
     elif args.command == "complete-task":
-        cmd_complete_task(args)
+        project = find_project(args.project)
+        if not project:
+            print(f"Error: Project '{args.project}' not found.")
+            sys.exit(1)
+        for task in project.tasks:
+            if task.title == args.title:
+                task.mark_complete()
+                save_all()
+                print(f"Task '{args.title}' marked complete.")
+                break
+        else:
+            print(f"Error: Task '{args.title}' not found in project '{args.project}'.")
 
 if __name__ == "__main__":
     main()

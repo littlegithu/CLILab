@@ -1,0 +1,59 @@
+{
+    "users": [
+        {
+            "name": "Test",
+            "email": "test@example.com"
+        },
+        {
+            "name": "Alice",
+            "email": "alice@example.com"
+        },
+        {
+            "name": "Bob",
+            "email": "bob@example.com"
+        },
+        {
+            "name": "Tester",
+            "email": "tester@test.com"
+        }
+    ],
+    "projects": [
+        {
+            "title": "WebApp",
+            "description": "Build dashboard",
+            "due_date": "2025-07-01",
+            "tasks": []
+        },
+        {
+            "title": "API",
+            "description": "REST API",
+            "due_date": "2025-08-15",
+            "tasks": []
+        },
+        {
+            "title": "TestProj",
+            "description": "Verify",
+            "due_date": "2025-12-31",
+            "tasks": [
+                "TestTask"
+            ]
+        }
+    ],
+    "tasks": [
+        {
+            "title": "Design UI",
+            "status": "pending",
+            "assigned_to": "Alice"
+        },
+        {
+            "title": "Write tests",
+            "status": "pending",
+            "assigned_to": "Alice"
+        },
+        {
+            "title": "TestTask",
+            "status": "pending",
+            "assigned_to": "Tester"
+        }
+    ]
+}
